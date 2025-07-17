@@ -24,5 +24,11 @@ export const useStoreScores = defineStore("score", {
       this.incorrect++;
       this.score = this.score - 50;
     },
+    clear()
+    {
+      this.correct=0,
+      this.incorrect=0,
+      this.score=0
+    }
   },
 });

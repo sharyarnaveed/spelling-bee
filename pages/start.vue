@@ -1,5 +1,6 @@
 <script setup>
 import { useRouter } from 'vue-router'
+import { useStoreScores } from '~/store/Score.store'
 import { useStoreWordsTore } from '~/store/Wordsstore'
 const router = useRouter()
 
@@ -42,11 +43,12 @@ const selectDifficulty = (level) => {
 }
 
 const wordsStore = useStoreWordsTore();
-
+const Scorestore=useStoreScores();
 
 onMounted(()=>
 {
 wordsStore.cleararray()
+Scorestore.clear()
 })
 </script>
 

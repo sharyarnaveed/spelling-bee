@@ -88,8 +88,6 @@ startgame.value=false
 </script>
 
 <template>
-  <Banner v-if="startgame"/>
-  <Endbanner v-if="isDisable"/>
   <main
     class="min-h-screen bg-gradient-to-br from-amber-900 via-orange-900 to-yellow-900 relative overflow-hidden"
   >
@@ -111,11 +109,13 @@ startgame.value=false
     </div>
     <ErrorToast v-if="showError" :message="showerrormsh" />
     <SuccessToast v-if="showSuccess" :message="showSuccessmsg" />
+
+
     <div class="relative z-10 min-h-screen p-6 sm:p-4">
       <div class="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
         <button
           @click="$router.push('/start')"
-          class="group flex items-center px-6 py-3 bg-yellow-500/10 hover:bg-yellow-400/20 backdrop-blur-md border border-yellow-400/30 hover:border-yellow-300/50 text-yellow-100 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105"
+          class="group flex items-center px-6 py-3 bg-yellow-500/10 hover:bg-yellow-400/20 backdrop-blur-md border border-yellow-400/30 hover:border-yellow-300/50 text-yellow-100 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 z-50 relative"
         >
           <svg
             class="w-5 h-5 mr-2 transform group-hover:-translate-x-1 transition-transform duration-300"
@@ -150,7 +150,8 @@ startgame.value=false
           </div>
         </div>
       </div>
-
+  <Banner v-if="startgame"/>
+  <Endbanner v-if="isDisable"/>
       <div class="max-w-4xl mx-auto w-full px-2">
         <div class="text-center mb-12">
           <div class="relative inline-block mb-8">
