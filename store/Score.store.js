@@ -5,6 +5,7 @@ export const useStoreScores = defineStore("score", {
     correct: 0,
     incorrect: 0,
     score: 0,
+    hint:0
   }),
   getters: {
     currectstats() {
@@ -12,6 +13,7 @@ export const useStoreScores = defineStore("score", {
         correct: this.correct,
         incorrect: this.incorrect,
         score: this.score,
+        hint:this.hint
       };
     },
   },
@@ -24,11 +26,16 @@ export const useStoreScores = defineStore("score", {
       this.incorrect++;
       this.score = this.score - 50;
     },
+    increasehint()
+    {
+      this.hint++
+    },
     clear()
     {
       this.correct=0,
       this.incorrect=0,
       this.score=0
+      this.hint=0
     }
   },
 });

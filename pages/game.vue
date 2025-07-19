@@ -10,8 +10,10 @@ const userinput = ref("");
 const wordslist = ref([]);
 const showError = ref(false);
 const showerrormsh = ref("");
+const displayhint=ref(false)
 const showSuccess = ref(false);
 const showSuccessmsg = ref("");
+const hint = ref(""); // Add this line
 
 function getrandomwords(count) {
   const shuffle = [...wordslist.value].sort(() => 0.5 - Math.random());
@@ -19,6 +21,9 @@ function getrandomwords(count) {
 }
 
 function next() {
+  hint.value=""
+
+  displayhint.value=false
   if (userinput.value == "") {
     showError.value = true;
     setTimeout(() => {
@@ -33,8 +38,12 @@ function next() {
       userinput.value.toUpperCase() == wordsStore.currentWord.toUpperCase()
     ) {
       scoreStore.winscore();
+    showSuccessmsg.value = "Correct";
+
     } else {
       scoreStore.loosescore();
+    showerrormsh.value = "Wrong";
+
     }
 
     userinput.value = "";
@@ -50,8 +59,25 @@ function next() {
   }
 }
 
-function reset() {
-  wordsStore.reset();
+async function reset() {
+  wordsStore.reset()
+  wordsStore.cleararray()
+  scoreStore.clear()
+await fetchwords()
+}
+
+async function getmeaning()
+{
+  scoreStore.increasehint()
+  const responce= await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${wordsStore.currentWord}`);
+  const rs=await responce.json()
+  // Get the first definition from the first meaning
+  hint.value =
+    rs[0]?.meanings?.[0]?.definitions?.[0]?.definition ||
+    "No hint available.";
+  console.log(rs);
+  displayhint.value=true
+
 }
 
 function playsound() {
@@ -65,10 +91,9 @@ const isDisable = computed(() => {
   return wordsStore.ended === true;
 });
 
-onMounted(async () => {
-  startgame.value=true
-  if (!wordsStore.words || wordsStore.words.length === 0) {
-    const responce = await fetch(`/words/${difficultylevel}.txt`);
+async function fetchwords()
+{
+   const responce = await fetch(`/words/${difficultylevel}.txt`);
     const words = await responce.text();
     wordslist.value = words
       .split("\n")
@@ -77,6 +102,13 @@ onMounted(async () => {
     const randomwords = getrandomwords(5);
     wordsStore.setWords(randomwords);
     console.log(wordsStore.words);
+}
+
+onMounted(async () => {
+  startgame.value=true
+  scoreStore.clear()
+  if (!wordsStore.words || wordsStore.words.length === 0) {
+   await fetchwords()
   }
 
 setTimeout(()=>
@@ -210,8 +242,32 @@ startgame.value=false
         </div>
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+         <button
+          @click="reset"
+          v-if="isDisable"
+            class="group relative bg-yellow-500/20 hover:bg-yellow-400/30 backdrop-blur-md border-2 border-yellow-400/30 hover:border-yellow-300/50 px-8 py-4 rounded-xl font-bold text-yellow-100 text-lg transition-all duration-300 transform hover:scale-105
+            sm:px-4 sm:py-2 sm:text-base"
+          >
+            <div class="flex items-center justify-center">
+              <svg
+                class="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform duration-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                ></path>
+              </svg>
+              Replay
+            </div>
+          </button>
           <button
             type="submit"
+            v-else
             class="group relative bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-300 hover:to-emerald-400 px-8 py-4 rounded-xl font-bold text-white text-lg shadow-lg transition-all duration-300 transform hover:scale-105
             sm:px-4 sm:py-2 sm:text-base"
             @click="next"
@@ -236,28 +292,7 @@ startgame.value=false
           </button>
 
           <button
-            class="group relative bg-yellow-500/20 hover:bg-yellow-400/30 backdrop-blur-md border-2 border-yellow-400/30 hover:border-yellow-300/50 px-8 py-4 rounded-xl font-bold text-yellow-100 text-lg transition-all duration-300 transform hover:scale-105
-            sm:px-4 sm:py-2 sm:text-base"
-          >
-            <div class="flex items-center justify-center">
-              <svg
-                class="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform duration-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                ></path>
-              </svg>
-              Replay
-            </div>
-          </button>
-
-          <button
+          @click="getmeaning"
             class="group relative bg-blue-500/20 hover:bg-blue-400/30 backdrop-blur-md border-2 border-blue-400/30 hover:border-blue-300/50 px-8 py-4 rounded-xl font-bold text-blue-100 text-lg transition-all duration-300 transform hover:scale-105
             sm:px-4 sm:py-2 sm:text-base"
           >
@@ -278,6 +313,13 @@ startgame.value=false
               Hint
             </div>
           </button>
+        </div>
+
+        <!-- Show hint below the buttons -->
+        <div v-if="displayhint" class="max-w-2xl mx-auto w-full px-2 mb-8">
+          <div class="bg-blue-500/10 border border-blue-400/30 rounded-xl p-4 text-blue-100 text-lg">
+            <strong>Hint:</strong> {{ hint }}
+          </div>
         </div>
 
         <div class="max-w-2xl mx-auto w-full px-2">
@@ -320,7 +362,7 @@ startgame.value=false
             <div
               class="bg-blue-500/10 backdrop-blur-md border border-blue-400/30 rounded-xl p-4 text-center"
             >
-              <div class="text-2xl font-bold text-blue-200 sm:text-xl">0</div>
+              <div class="text-2xl font-bold text-blue-200 sm:text-xl">{{ scoreStore.hint }}</div>
               <div class="text-sm text-blue-200/70">Hints Used</div>
             </div>
           </div>
