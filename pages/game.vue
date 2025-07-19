@@ -38,18 +38,20 @@ function next() {
       userinput.value.toUpperCase() == wordsStore.currentWord.toUpperCase()
     ) {
       scoreStore.winscore();
+    showSuccess.value = true;
+
     showSuccessmsg.value = "Correct";
 
     } else {
       scoreStore.loosescore();
+      showError.value=true
     showerrormsh.value = "Wrong";
 
     }
 
     userinput.value = "";
 
-    showSuccess.value = true;
-    showSuccessmsg.value = "next word loaded";
+    // showSuccessmsg.value = "next word loaded";
     setTimeout(() => {
       showSuccess.value = false;
     }, 3000);
