@@ -12,7 +12,7 @@ const difficulties = [
     bgPattern: 'bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600',
     glowColor: 'shadow-emerald-500/50',
     hoverGlow: 'hover:shadow-emerald-400/60',
-    features: ['3-5 letter words', 'Basic vocabulary', 'Friendly hints'],
+    features: ['5 letter words', 'Basic vocabulary', 'Friendly hints'],
     difficulty: 1
   },
   {
@@ -22,7 +22,7 @@ const difficulties = [
     bgPattern: 'bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600',
     glowColor: 'shadow-purple-500/50',
     hoverGlow: 'hover:shadow-purple-400/60',
-    features: ['6-8 letter words', 'Mixed vocabulary', 'Moderate hints'],
+    features: ['5 letter words', 'Mixed vocabulary', 'Moderate hints'],
     difficulty: 2
   },
   {
@@ -32,7 +32,7 @@ const difficulties = [
     bgPattern: 'bg-gradient-to-br from-orange-500 via-red-600 to-pink-600',
     glowColor: 'shadow-red-500/50',
     hoverGlow: 'hover:shadow-red-400/60',
-    features: ['9+ letter words', 'Complex vocabulary', 'Minimal hints'],
+    features: ['5 letter words', 'Complex vocabulary', 'Minimal hints'],
     difficulty: 3
   }
 ]
@@ -91,20 +91,20 @@ Scorestore.clear()
           class="group relative cursor-pointer transform transition-all duration-700 hover:scale-105"
           @click="selectDifficulty(difficulty.level)"
         >
-          <!-- Card Background -->
+        
           <div class="relative overflow-hidden rounded-3xl p-8 h-full">
-            <!-- Gradient Background -->
+         
             <div :class="`absolute inset-0 ${difficulty.bgPattern} opacity-90 transition-all duration-500 group-hover:opacity-100`"></div>
             
-            <!-- Glow Effect -->
+      
             <div :class="`absolute inset-0 rounded-3xl shadow-2xl ${difficulty.glowColor} ${difficulty.hoverGlow} transition-all duration-500 group-hover:shadow-3xl`"></div>
             
-            <!-- Glass Overlay -->
+          
             <div class="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20"></div>
             
-            <!-- Content -->
+           
             <div class="relative z-10 text-center text-white h-full flex flex-col">
-              <!-- Difficulty Indicator -->
+          
               <div class="flex justify-center mb-4">
                 <div class="flex space-x-1">
                   <div 
@@ -124,17 +124,17 @@ Scorestore.clear()
                 {{ difficulty.icon }}
               </div>
               
-              <!-- Title -->
+            
               <h2 class="text-3xl md:text-4xl font-bold mb-4 tracking-wide">
                 {{ difficulty.level }}
               </h2>
               
-              <!-- Description -->
+           
               <p class="text-white/90 text-lg mb-8 leading-relaxed flex-grow">
                 {{ difficulty.description }}
               </p>
               
-              <!-- Features -->
+            
               <div class="space-y-3 mb-8">
                 <div 
                   v-for="(feature, featureIndex) in difficulty.features" 
@@ -147,7 +147,7 @@ Scorestore.clear()
                 </div>
               </div>
               
-              <!-- Select Button -->
+             
               <button 
                 class="relative bg-white/20 hover:bg-white/30 backdrop-blur-md border-2 border-white/30 hover:border-white/50 rounded-2xl py-4 px-8 font-bold text-lg transition-all duration-300 transform group-hover:scale-105 group-hover:shadow-xl"
                 @click.stop="selectDifficulty(difficulty.level)"
@@ -160,7 +160,20 @@ Scorestore.clear()
         </div>
       </div>
 
-      <!-- Back Button -->
+      <!-- Multiplayer Button -->
+      <div class="flex justify-center mb-12">
+        <button
+          @click="router.push('/multiplayer')"
+          class="group relative bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 hover:scale-105 hover:shadow-2xl transition-all duration-300 rounded-3xl py-6 px-12 font-bold text-2xl text-white shadow-xl border-2 border-white/30 hover:border-white/50"
+        >
+          <span class="flex items-center space-x-3">
+            <span class="text-4xl animate-bounce">🤝</span>
+            <span>MULTIPLAYER</span>
+          </span>
+          <div class="absolute inset-0 bg-white/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        </button>
+      </div>
+
       <div class="text-center">
         <button 
           @click="router.push('/')"
@@ -174,7 +187,7 @@ Scorestore.clear()
       </div>
     </div>
 
-    <!-- Floating Elements -->
+
     <div class="fixed top-20 left-20 text-6xl animate-bounce opacity-20" style="animation-delay: 0s;">🌟</div>
     <div class="fixed top-40 right-32 text-4xl animate-pulse opacity-20" style="animation-delay: 1s;">✨</div>
     <div class="fixed bottom-32 left-40 text-5xl animate-bounce opacity-20" style="animation-delay: 2s;">🎯</div>
