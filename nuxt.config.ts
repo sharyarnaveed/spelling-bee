@@ -3,10 +3,19 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ['~/assets/global.css'],
   modules: ['@pinia/nuxt'],
-   pinia: {
+  pinia: {
     storesDirs: ['./stores/**', './custom-folder/stores/**'],
   },
-  // Toast options should be set in a separate toast.config.js file or via runtimeConfig if supported by @nuxtjs/toast
+  runtimeConfig: {
+    // Private keys (only available on server-side)
+    // Public keys (exposed to client-side)
+    public: {
+      appwriteProjectId: process.env.NUXT_PUBLIC_APPWRITE_PROJECT_ID,
+      appwriteEndpoint: process.env.NUXT_PUBLIC_APPWRITE_ENDPOINT,
+      appwriteDatabase: process.env.NUXT_PUBLIC_APPWRITE_DATABASE,
+      appwriteCollection: process.env.NUXT_PUBLIC_APPWRITE_COLLECTION,
+    }
+  },
   postcss: {
     plugins: {
       tailwindcss: {},
