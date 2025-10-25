@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 export default defineNuxtPlugin(()=>{
-    const socket=io('http://localhost:3001')
+    const socket=io('https://spelling-bee-theta.vercel.app')
 
     return{
         provide:{
