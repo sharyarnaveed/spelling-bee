@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "dev": "concurrently \"npm run dev:nuxt\" \"npm run dev:socket\"",
+    "dev": "nuxt dev",
     "dev:nuxt": "nuxt dev",
-    "dev:socket": "nodemon socket-server/index.js",
+    "dev:socket": "echo 'Using deployed socket server at http://spellingbee.burjalsama.site/'",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"

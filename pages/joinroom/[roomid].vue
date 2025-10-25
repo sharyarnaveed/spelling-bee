@@ -270,7 +270,7 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
       >
         <div class="flex items-center gap-2">
           <span v-if="answerResult.correct">✅</span>
-          <span v-else">❌</span>
+          <span v-else>❌</span>
           <div class="flex-1">
             <p class="font-bold">
               {{ answerResult.isMyAnswer ? 'You' : answerResult.username }}
