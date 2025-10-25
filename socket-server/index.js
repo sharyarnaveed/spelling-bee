@@ -2,6 +2,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import fs from "fs";
 import path from "path";
+import { saveUserScore, getUserHighScore } from "./appwrite.js";
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -54,10 +55,10 @@ function getRandomWords(words, count = 10) {
 io.on("connection", (socket) => {
   console.log("⚡ New client connected:", socket.id);
 
-  socket.on("create-room", ({ roomid, username }) => {
-    rooms.set(roomid, [{ socketId: socket.id, username }]);
+  socket.on("create-room", ({ roomid, username, userId }) => {
+    rooms.set(roomid, [{ socketId: socket.id, username, userId }]);
     socket.join(roomid);
-    console.log(`Room ${roomid} created by ${username}`);
+    console.log(`Room ${roomid} created by ${username} (ID: ${userId})`);
     socket.emit("room-created", { roomid });
 
     io.to(roomid).emit("room-users", {
@@ -65,7 +66,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("join-room", ({ roomid, username }) => {
+  socket.on("join-room", ({ roomid, username, userId }) => {
     const room = rooms.get(roomid);
     console.log(room);
 
@@ -84,7 +85,7 @@ io.on("connection", (socket) => {
       (user) => user.socketId === socket.id || user.username === username
     );
     if (!alreadyInRoom) {
-      room.push({ socketId: socket.id, username });
+      room.push({ socketId: socket.id, username, userId });
     }
 
     socket.join(roomid);
@@ -231,6 +232,26 @@ io.on("connection", (socket) => {
         prev.score > current.score ? prev : current
       );
 
+      // Save scores to database for all users
+      const savePromises = gameState.users.map(async (user) => {
+        try {
+          if (user.userId) { // Only save if user has a valid userId
+            await saveUserScore(user.userId, user.score, 'multiplayer');
+            console.log(`✅ Saved score ${user.score} for user ${user.username} (${user.userId})`);
+          } else {
+            console.log(`⚠️ No userId found for user ${user.username}, skipping score save`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to save score for user ${user.username}:`, error);
+        }
+      });
+
+      // Wait for all scores to be saved (but don't block the game ending)
+      Promise.allSettled(savePromises).then((results) => {
+        const successCount = results.filter(result => result.status === 'fulfilled').length;
+        console.log(`📊 Score saving completed: ${successCount}/${gameState.users.length} successful`);
+      });
+
       io.to(roomid).emit("game-ended", {
         winner: winner,
         finalScores: gameState.users.sort((a, b) => b.score - a.score),
@@ -285,6 +306,26 @@ io.on("connection", (socket) => {
       const winner = gameState.users.reduce((prev, current) =>
         prev.score > current.score ? prev : current
       );
+
+      // Save scores to database for all users
+      const savePromises = gameState.users.map(async (user) => {
+        try {
+          if (user.userId) { // Only save if user has a valid userId
+            await saveUserScore(user.userId, user.score, 'multiplayer');
+            console.log(`✅ Saved score ${user.score} for user ${user.username} (${user.userId})`);
+          } else {
+            console.log(`⚠️ No userId found for user ${user.username}, skipping score save`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to save score for user ${user.username}:`, error);
+        }
+      });
+
+      // Wait for all scores to be saved (but don't block the game ending)
+      Promise.allSettled(savePromises).then((results) => {
+        const successCount = results.filter(result => result.status === 'fulfilled').length;
+        console.log(`📊 Score saving completed: ${successCount}/${gameState.users.length} successful`);
+      });
 
       io.to(roomid).emit("game-ended", {
         winner: winner,

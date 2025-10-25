@@ -31,6 +31,9 @@ onMounted(() => {
     return;
   }
 
+  // Get current user information for userId
+  const { account } = useAppwrite();
+
   // Set up the listener BEFORE emitting join-room
   $socket.on("room-users", ({ users: u }) => {
     users.value = u;
@@ -134,10 +137,22 @@ onMounted(() => {
     finalScores.value = scores;
   });
 
-  // Now emit join-room AFTER listeners are set up
-  $socket.emit("join-room", {
-    roomid,
-    username,
+  // Get current user and emit join-room AFTER listeners are set up
+  account.get().then((user) => {
+    $socket.emit("join-room", {
+      roomid,
+      username,
+      userId: user.$id, // Include user ID from Appwrite
+    });
+    console.log("Joining room with user ID:", user.$id);
+  }).catch((error) => {
+    console.error("Error getting user info:", error);
+    // Fallback: join room without userId
+    $socket.emit("join-room", {
+      roomid,
+      username,
+      userId: null,
+    });
   });
 });
 
@@ -221,40 +236,90 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 p-4">
-    <div class="max-w-6xl mx-auto">
+  <div class="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50">
+    <!-- Top Navigation Bar - Fixed -->
+    <div class="sticky top-0 z-30 bg-white border-b-2 border-amber-200 shadow-lg">
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3">
+        <div class="flex items-center justify-between">
+          <!-- Logo and Title -->
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div class="text-2xl sm:text-3xl lg:text-4xl">🐝</div>
+            <div>
+              <h1 class="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                Spelling Bee
+              </h1>
+              <p class="text-xs text-gray-500 hidden sm:block">Multiplayer Challenge</p>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Copy Room ID Button -->
+            <button
+              @click="copyRoomId"
+              class="px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-105 font-semibold shadow-md flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+            >
+              <span class="text-sm">📋</span>
+              <span class="hidden sm:inline">Copy ID</span>
+              <span class="sm:hidden">Copy</span>
+            </button>
+
+            <!-- Leave Room Button -->
+            <button
+              @click="leaveRoom"
+              class="px-3 sm:px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all transform hover:scale-105 font-semibold shadow-md flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+            >
+              <span class="text-sm">🚪</span>
+              <span class="hidden sm:inline">Leave</span>
+              <span class="sm:hidden">Exit</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Room ID Display -->
+        <div class="mt-3 bg-gradient-to-r from-amber-100 to-yellow-100 rounded-lg p-3 border border-dashed border-amber-400">
+          <div class="text-center">
+            <span class="text-xs text-amber-700 font-medium">Room ID:</span>
+            <p class="text-lg sm:text-xl lg:text-2xl font-mono font-bold text-amber-600 tracking-wider break-all">{{ roomid }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
       <!-- Game Ended Modal -->
       <div
         v-if="gameEnded"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       >
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 max-w-sm sm:max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
           <div class="text-center">
-            <div class="text-6xl mb-4">🏆</div>
-            <h2 class="text-3xl font-bold text-gray-800 mb-2">Game Over!</h2>
-            <p class="text-xl text-amber-600 mb-6">
+            <div class="text-4xl sm:text-5xl lg:text-6xl mb-4">🏆</div>
+            <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Game Over!</h2>
+            <p class="text-base sm:text-lg lg:text-xl text-amber-600 mb-6">
               Winner: <span class="font-bold">{{ winner.username }}</span>
             </p>
             
             <!-- Final Scores -->
-            <div class="space-y-3 mb-6">
-              <h3 class="text-lg font-semibold text-gray-700">Final Scores:</h3>
+            <div class="space-y-2 sm:space-y-3 mb-6">
+              <h3 class="text-sm sm:text-base lg:text-lg font-semibold text-gray-700">Final Scores:</h3>
               <div
                 v-for="(user, index) in finalScores"
                 :key="user.socketId"
-                class="flex justify-between items-center bg-gray-100 rounded-lg p-3"
+                class="flex justify-between items-center bg-gray-100 rounded-lg p-2 sm:p-3"
               >
                 <div class="flex items-center gap-2">
-                  <span>{{ index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉' }}</span>
-                  <span class="font-medium">{{ user.username }}</span>
+                  <span class="text-sm sm:text-base">{{ index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉' }}</span>
+                  <span class="font-medium text-sm sm:text-base truncate">{{ user.username }}</span>
                 </div>
-                <span class="font-bold text-amber-600">{{ user.score }}</span>
+                <span class="font-bold text-amber-600 text-sm sm:text-base">{{ user.score }}</span>
               </div>
             </div>
             
             <button
               @click="playAgain"
-              class="px-6 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all font-semibold"
+              class="w-full px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all font-semibold shadow-lg transform hover:scale-105 text-sm sm:text-base"
             >
               Back to Lobby
             </button>
@@ -265,22 +330,21 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
       <!-- Answer Result Display -->
       <div
         v-if="answerResult"
-        class="fixed top-4 right-4 z-40 p-4 rounded-xl shadow-lg max-w-sm"
+        class="fixed top-20 left-3 right-3 sm:top-24 sm:right-4 sm:left-auto z-40 p-3 sm:p-4 rounded-xl shadow-lg max-w-sm mx-auto sm:mx-0"
         :class="answerResult.correct ? 'bg-green-500 text-white' : 'bg-red-500 text-white'"
       >
-        <div class="flex items-center gap-2">
-          <span v-if="answerResult.correct">✅</span>
-          <span v-else>❌</span>
-          <div class="flex-1">
-            <p class="font-bold">
+        <div class="flex items-start gap-2">
+          <span class="text-lg sm:text-xl mt-1">{{ answerResult.correct ? '✅' : '❌' }}</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-sm sm:text-base leading-tight">
               {{ answerResult.isMyAnswer ? 'You' : answerResult.username }}
               {{ answerResult.correct ? 'got it right!' : 'got it wrong!' }}
             </p>
-            <p class="text-sm">Answer: {{ answerResult.answer }}</p>
-            <p v-if="!answerResult.correct" class="text-xs">
+            <p class="text-xs sm:text-sm opacity-90 truncate">Answer: {{ answerResult.answer }}</p>
+            <p v-if="!answerResult.correct" class="text-xs opacity-90 truncate">
               Correct: {{ answerResult.correctWord }}
             </p>
-            <p class="text-xs mt-1">
+            <p class="text-xs mt-1 font-semibold">
               {{ answerResult.correct ? '+10 points' : '-5 points' }}
             </p>
           </div>
@@ -290,26 +354,26 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
       <!-- Connecting State -->
       <div
         v-if="isConnecting"
-        class="flex items-center justify-center min-h-screen"
+        class="flex items-center justify-center min-h-[70vh] px-4"
       >
-        <div class="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md w-full">
-          <div class="animate-spin rounded-full h-16 w-16 border-4 border-amber-500 border-t-transparent mx-auto mb-6"></div>
-          <p class="text-gray-600 text-lg">Connecting to room...</p>
+        <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 lg:p-12 text-center max-w-md w-full">
+          <div class="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-amber-500 border-t-transparent mx-auto mb-6"></div>
+          <p class="text-gray-600 text-sm sm:text-base lg:text-lg">Connecting to room...</p>
         </div>
       </div>
 
       <!-- Error State -->
       <div
         v-else-if="connectionError"
-        class="flex items-center justify-center min-h-screen"
+        class="flex items-center justify-center min-h-[70vh] px-4"
       >
-        <div class="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md w-full">
-          <div class="text-8xl mb-6">❌</div>
-          <h2 class="text-3xl font-bold text-red-600 mb-3">{{ connectionError }}</h2>
-          <p class="text-gray-600 mb-6">Unable to join this room.</p>
+        <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 lg:p-12 text-center max-w-md w-full">
+          <div class="text-5xl sm:text-6xl lg:text-8xl mb-6">❌</div>
+          <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600 mb-3">{{ connectionError }}</h2>
+          <p class="text-gray-600 mb-6 text-sm sm:text-base">Unable to join this room.</p>
           <button
             @click="router.push('/')"
-            class="px-8 py-4 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all transform hover:scale-105 font-semibold text-lg shadow-lg"
+            class="w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-105 font-semibold text-sm sm:text-base lg:text-lg shadow-lg"
           >
             Go Back Home
           </button>
@@ -318,74 +382,39 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
 
       <!-- Main Content -->
       <template v-else>
-        <!-- Header -->
-        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6 border-4 border-amber-300">
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-3">
-              <div class="text-5xl">🐝</div>
-              <div>
-                <h1 class="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                  Spelling Bee
-                </h1>
-                <p class="text-sm text-gray-500">Multiplayer Challenge</p>
-              </div>
-            </div>
-            <button
-              @click="leaveRoom"
-              class="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all transform hover:scale-105 font-semibold shadow-lg flex items-center gap-2"
-            >
-              Leave Room
-            </button>
-          </div>
-
-          <!-- Room ID Display -->
-          <div class="bg-gradient-to-r from-amber-100 to-yellow-100 rounded-xl p-5 border-2 border-dashed border-amber-400">
-            <div class="flex items-center justify-between">
-              <div>
-                <span class="text-sm text-amber-700 font-medium">Room ID:</span>
-                <p class="text-3xl font-mono font-bold text-amber-600 tracking-wider">{{ roomid }}</p>
-              </div>
-              <button
-                @click="copyRoomId"
-                class="px-5 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all transform hover:scale-105 font-semibold shadow-md flex items-center gap-2"
-              >
-                Copy
-              </button>
-            </div>
-          </div>
-        </div>
-
         <!-- Lobby View -->
         <div
           v-if="!gameStarted"
-          class="bg-white rounded-2xl shadow-xl p-8 border-4 border-amber-200"
+          class="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border-2 border-amber-200"
         >
-          <div class="flex items-center justify-between mb-8">
-            <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
-              Players in Room
-              <span class="text-lg text-gray-500 font-normal">({{ users.length }}/2)</span>
+          <!-- Header with Connection Status -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+            <h2 class="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800 flex items-center gap-2 sm:gap-3">
+              <span>👥</span>
+              <span>Players in Room</span>
+              <span class="text-sm sm:text-base lg:text-lg text-gray-500 font-normal">({{ users.length }}/2)</span>
             </h2>
-            <div class="flex items-center gap-2 bg-green-100 px-4 py-2 rounded-full">
-              <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span class="text-sm text-green-700 font-semibold">Connected</span>
+            <div class="flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 px-3 sm:px-4 py-2 rounded-full border border-green-200">
+              <div class="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <span class="text-xs sm:text-sm text-green-700 font-semibold">Connected</span>
             </div>
           </div>
 
           <!-- Players Grid -->
           <div
             v-if="users.length > 0"
-            class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8"
+            class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8"
           >
             <div
               v-for="(user, index) in users"
               :key="user.socketId"
-              class="bg-gradient-to-br from-amber-50 to-yellow-50 border-3 border-amber-300 rounded-2xl p-8 text-center transform transition-all hover:scale-105 shadow-lg"
+              class="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 border-2 border-amber-300 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 text-center transform transition-all hover:scale-105 shadow-lg"
             >
-              <div class="text-6xl mb-4">{{ index === 0 ? "👑" : "👤" }}</div>
-              <p class="font-bold text-2xl text-gray-800 mb-1">{{ user.username }}</p>
+              <div class="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl mb-2 sm:mb-3 lg:mb-4">{{ index === 0 ? "👑" : "👤" }}</div>
+              <p class="font-bold text-base sm:text-lg lg:text-xl xl:text-2xl text-gray-800 mb-1 break-words">{{ user.username }}</p>
               <span
                 v-if="index === 0"
-                class="inline-block px-3 py-1 bg-amber-500 text-white text-xs rounded-full font-semibold"
+                class="inline-block px-2 sm:px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs sm:text-sm rounded-full font-semibold shadow-md"
               >
                 HOST
               </span>
@@ -393,28 +422,32 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
           </div>
 
           <!-- Empty State -->
-          <div v-else class="text-center py-12">
-            <div class="text-6xl mb-4">🏃‍♂️</div>
-            <p class="text-gray-500 text-lg">Waiting for players to join...</p>
+          <div v-else class="text-center py-8 sm:py-12">
+            <div class="text-4xl sm:text-5xl lg:text-6xl mb-4">🏃‍♂️</div>
+            <p class="text-gray-500 text-sm sm:text-base lg:text-lg">Waiting for players to join...</p>
           </div>
 
           <!-- Start Game Section -->
-          <div v-if="users.length > 0" class="border-t-2 border-amber-200 pt-8">
-            <div class="flex items-center justify-between">
-              <div class="flex-1">
-                <p class="text-gray-600 text-lg mb-2">🎯 Ready to test your spelling skills?</p>
-                <p class="text-sm text-gray-500">Share the room ID with friends to invite them!</p>
+          <div v-if="users.length > 0" class="border-t-2 border-amber-200 pt-4 sm:pt-6 lg:pt-8">
+            <div class="flex flex-col gap-4">
+              <div class="text-center sm:text-left">
+                <p class="text-gray-600 text-sm sm:text-base lg:text-lg mb-2 flex items-center justify-center sm:justify-start gap-2">
+                  <span>🎯</span>
+                  Ready to test your spelling skills?
+                </p>
+                <p class="text-xs sm:text-sm text-gray-500">Share the room ID with friends to invite them!</p>
               </div>
               <button
                 @click="handleStartGame"
                 :disabled="users.length < 1"
-                :class="[
-                  'px-8 py-4 rounded-xl font-bold text-lg shadow-xl transform transition-all flex items-center gap-3',
+                :class=" [
+                  'w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base lg:text-lg shadow-xl transform transition-all flex items-center justify-center gap-2 sm:gap-3',
                   users.length >= 1
                     ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 hover:scale-105'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed',
                 ]"
               >
+                <span>🚀</span>
                 {{ users.length >= 1 ? "Start Game" : "Need Players" }}
               </button>
             </div>
@@ -422,63 +455,71 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
         </div>
 
         <!-- Game View -->
-        <div v-else class="space-y-6">
+        <div v-else class="space-y-4 sm:space-y-6">
           <!-- My Progress and Score -->
-          <div class="bg-white rounded-2xl shadow-xl p-6 border-4 border-amber-200">
+          <div class="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-amber-200">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-2xl font-bold text-gray-800">📈 My Progress</h3>
+              <h3 class="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <span>📈</span>
+                <span class="hidden sm:inline">My Progress</span>
+                <span class="sm:hidden">Progress</span>
+              </h3>
               <div class="text-right">
-                <p class="text-sm text-gray-500">My Score</p>
-                <p class="text-3xl font-bold text-amber-600">{{ myScore }}</p>
+                <p class="text-xs sm:text-sm text-gray-500">My Score</p>
+                <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-amber-600">{{ myScore }}</p>
               </div>
             </div>
-            <div class="flex items-center justify-between bg-amber-50 rounded-xl p-4">
+            <div class="flex items-center justify-between bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-amber-200">
               <div>
-                <p class="text-lg font-bold text-gray-800">
+                <p class="text-sm sm:text-base lg:text-lg font-bold text-gray-800">
                   Word {{ currentRound }} of {{ totalRounds }}
                 </p>
-                <p class="text-sm text-gray-600">
+                <p class="text-xs sm:text-sm text-gray-600">
                   {{ isFinished ? 'Completed!' : 'In Progress' }}
                 </p>
               </div>
-              <div class="text-4xl">
+              <div class="text-xl sm:text-2xl lg:text-3xl xl:text-4xl">
                 {{ isFinished ? '🎉' : '📝' }}
               </div>
             </div>
           </div>
 
           <!-- All Players Scoreboard -->
-          <div class="bg-white rounded-2xl shadow-xl p-6 border-4 border-amber-200">
-            <h3 class="text-2xl font-bold text-gray-800 mb-4">📊 All Players</h3>
-            <div class="space-y-3">
+          <div class="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-amber-200">
+            <h3 class="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <span>📊</span>
+              <span class="hidden sm:inline">All Players</span>
+              <span class="sm:hidden">Players</span>
+            </h3>
+            <div class="space-y-2 sm:space-y-3">
               <div
                 v-for="(user, index) in users.slice().sort((a, b) => (b.score || 0) - (a.score || 0))"
                 :key="user.socketId"
-                class="flex items-center justify-between p-4 rounded-xl border-2"
+                class="flex items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl border-2"
                 :class=" [
                   user.socketId === $socket.id 
-                    ? 'bg-amber-100 border-amber-400' 
+                    ? 'bg-gradient-to-r from-amber-100 to-yellow-100 border-amber-400' 
                     : 'bg-gray-50 border-gray-200'
                 ]"
               >
-                <div class="flex items-center gap-3">
-                  <span class="text-2xl">
+                <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                  <span class="text-base sm:text-lg lg:text-xl xl:text-2xl flex-shrink-0">
                     {{ index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉' }}
                   </span>
-                  <div>
-                    <span class="font-bold text-lg text-gray-800">
+                  <div class="min-w-0 flex-1">
+                    <span class="font-bold text-sm sm:text-base lg:text-lg text-gray-800 block truncate">
                       {{ user.username }}
                       {{ user.socketId === $socket.id ? ' (You)' : '' }}
                     </span>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-xs sm:text-sm text-gray-500">
                       Word {{ (user.currentWordIndex || 0) + 1 }} / {{ totalRounds }}
-                      {{ user.isFinished ? ' - Finished!' : '' }}
+                      {{ user.isFinished ? ' - Done!' : '' }}
                     </p>
                   </div>
                 </div>
-                <div class="text-right">
-                  <span class="text-2xl font-bold text-amber-600">{{ user.score || 0 }}</span>
-                  <p class="text-xs text-gray-500">points</p>
+                <div class="text-right flex-shrink-0">
+                  <span class="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-amber-600">{{ user.score || 0 }}</span>
+                  <p class="text-xs text-gray-500">pts</p>
                 </div>
               </div>
             </div>
@@ -487,28 +528,32 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
           <!-- Game Controls -->
           <div
             v-if="!isFinished"
-            class="bg-white rounded-2xl shadow-xl p-8 border-4 border-amber-200"
+            class="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border-2 border-amber-200"
           >
-            <div class="text-center mb-8">
-              <h3 class="text-3xl font-bold text-gray-800 mb-2">🎯 Spell the Word!</h3>
-              <p class="text-gray-600">Listen carefully and type your answer</p>
-              <div class="mt-4 flex justify-center gap-4 text-sm">
-                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full">
+            <div class="text-center mb-6 sm:mb-8">
+              <h3 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2">
+                <span>🎯</span>
+                Spell the Word!
+              </h3>
+              <p class="text-gray-600 text-sm sm:text-base">Listen carefully and type your answer</p>
+              <div class="mt-4 flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 text-xs sm:text-sm">
+                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full border border-green-200">
                   ✅ Correct: +10 points
                 </span>
-                <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full">
+                <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full border border-red-200">
                   ❌ Wrong: -5 points
                 </span>
               </div>
             </div>
 
             <!-- Play Sound Button -->
-            <div class="flex justify-center mb-8">
+            <div class="flex justify-center mb-6 sm:mb-8">
               <button
                 @click="handlePlaySound"
-                class="px-12 py-6 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-2xl hover:from-blue-600 hover:to-indigo-600 transition-all transform hover:scale-105 font-bold text-xl shadow-2xl flex items-center gap-4"
+                class="w-full sm:w-auto px-6 sm:px-8 lg:px-12 py-4 sm:py-5 lg:py-6 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white rounded-xl sm:rounded-2xl hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 transition-all transform hover:scale-105 font-bold text-base sm:text-lg lg:text-xl shadow-2xl flex items-center justify-center gap-2 sm:gap-3 lg:gap-4"
               >
-                🔊 Play Word {{ currentRound }}
+                <span class="text-lg sm:text-xl lg:text-2xl">🔊</span>
+                Play Word {{ currentRound }}
               </button>
             </div>
 
@@ -522,41 +567,43 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
                 type="text"
                 @keypress.enter="handleSubmit"
                 placeholder="Type the spelling here..."
-                class="w-full px-6 py-4 text-2xl border-3 border-amber-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-400 focus:border-amber-500 font-mono text-center uppercase tracking-widest"
+                class="w-full px-4 sm:px-6 py-3 sm:py-4 text-base sm:text-lg lg:text-xl xl:text-2xl border-2 border-amber-300 rounded-lg sm:rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-400 focus:border-amber-500 font-mono text-center uppercase tracking-widest bg-gradient-to-r from-white to-amber-50"
               />
             </div>
 
             <!-- Action Buttons -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
               <button
                 @click="handleSubmit"
                 :disabled="!currentAnswer.trim()"
                 :class=" [
-                  'px-8 py-4 rounded-xl font-bold text-lg shadow-lg transform transition-all flex items-center justify-center gap-3',
+                  'px-4 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-bold text-sm sm:text-base lg:text-lg shadow-lg transform transition-all flex items-center justify-center gap-2 sm:gap-3',
                   currentAnswer.trim()
                     ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 hover:scale-105'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed',
                 ]"
               >
+                <span>✅</span>
                 Submit Answer
               </button>
               <button
                 @click="handleNext"
-                class="px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-105 font-bold text-lg shadow-lg flex items-center justify-center gap-3"
+                class="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg sm:rounded-xl hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-105 font-bold text-sm sm:text-base lg:text-lg shadow-lg flex items-center justify-center gap-2 sm:gap-3"
               >
+                <span>⏭️</span>
                 Skip Word
               </button>
             </div>
 
             <!-- My Progress Bar -->
-            <div class="mt-8">
-              <div class="flex justify-between text-sm text-gray-600 mb-2">
+            <div class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg sm:rounded-xl p-4 border border-amber-200">
+              <div class="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
                 <span>My Progress</span>
                 <span>{{ Math.round((myCurrentWordIndex / totalRounds) * 100) }}%</span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+              <div class="w-full bg-gray-200 rounded-full h-3 sm:h-4 overflow-hidden shadow-inner">
                 <div
-                  class="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-500"
+                  class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 h-full rounded-full transition-all duration-500 shadow-sm"
                   :style="{ width: `${(myCurrentWordIndex / totalRounds) * 100}%` }"
                 ></div>
               </div>
@@ -566,12 +613,21 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
           <!-- Finished State -->
           <div
             v-else
-            class="bg-white rounded-2xl shadow-xl p-8 border-4 border-green-300 text-center"
+            class="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border-2 border-green-300 text-center"
           >
-            <div class="text-6xl mb-4">🎉</div>
-            <h3 class="text-3xl font-bold text-gray-800 mb-2">You're Done!</h3>
-            <p class="text-gray-600 mb-4">Final Score: <span class="font-bold text-green-600">{{ myScore }}</span></p>
-            <p class="text-sm text-gray-500">Waiting for other players to finish...</p>
+            <div class="text-4xl sm:text-5xl lg:text-6xl mb-4">🎉</div>
+            <h3 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-2">You're Done!</h3>
+            <p class="text-gray-600 mb-4 text-sm sm:text-base">
+              Final Score: <span class="font-bold text-green-600 text-base sm:text-lg lg:text-xl">{{ myScore }}</span>
+            </p>
+            <p class="text-xs sm:text-sm text-gray-500">Waiting for other players to finish...</p>
+            <div class="mt-4 animate-pulse">
+              <div class="inline-flex items-center gap-1">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+              </div>
+            </div>
           </div>
         </div>
       </template>
@@ -580,7 +636,67 @@ const currentRound = computed(() => myCurrentWordIndex.value + 1);
 </template>
 
 <style scoped>
-.border-3 {
-  border-width: 3px;
+/* Custom animations */
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0,0,0);
+  }
+  40%, 43% {
+    transform: translate3d(0,-15px,0);
+  }
+  70% {
+    transform: translate3d(0,-7px,0);
+  }
+  90% {
+    transform: translate3d(0,-3px,0);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+/* Improved gradient text for better readability */
+.bg-clip-text {
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Enhanced hover effects */
+.transform:hover {
+  transform: translateY(-2px);
+}
+
+/* Custom scrollbar for modal */
+.max-h-\[90vh\]::-webkit-scrollbar {
+  width: 4px;
+}
+
+.max-h-\[90vh\]::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.max-h-\[90vh\]::-webkit-scrollbar-thumb {
+  background: #d97706;
+  border-radius: 10px;
+}
+
+.max-h-\[90vh\]::-webkit-scrollbar-thumb:hover {
+  background: #b45309;
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  .border-3 {
+    border-width: 2px;
+  }
+}
+
+/* Ensure proper touch targets on mobile */
+@media (max-width: 768px) {
+  button {
+    min-height: 44px;
+  }
 }
 </style>
